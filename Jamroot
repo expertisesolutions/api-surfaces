@@ -1,0 +1,72 @@
+# (c) Copyright 2011-2014 Felipe Magno de Almeida
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import feature ;
+
+feature.feature integration-link : shared static : composite link-incompatible ;
+feature.feature internal-ts-file : off on : composite link-incompatible ;
+
+project middleware-api
+ : requirements <threading>multi
+ ;
+
+alias middleware-api : : : : <include>include ;
+
+lib middleware-api-directfb : directfb/src/graphics.c directfb/src/input.c
+ directfb/src/gstreamer.c
+ middleware-api /dfb//dfb /cairo//cairo /gst//gst
+ ;
+explicit middleware-api-directfb ;
+
+lib middleware-api-dvbv3 : dvbv3/src/sections.c middleware-api ;
+explicit middleware-api-dvbv3 ;
+
+lib middleware-api-dvbv5 : dvbv5/src/sections.c middleware-api ;
+explicit middleware-api-dvbv5 ;
+
+lib middleware-api-ts-file : ts-file/src/sections.c middleware-api
+ : : : <define>MIDDLEWARE_API_IMPL_TS_FILE <internal-ts-file>on
+ ;
+explicit middleware-api-ts-file ;
+
+exe middleware-api-dvbv5-process : process/src/main.c process/src/demultiplex.c
+ middleware-api-directfb
+ middleware-api-dvbv5 /middleware//middleware
+ : <include>process/include
+ # <integration-link>shared:<source>/middleware//middleware/<link>shared
+ # <integration-link>static:<source>/middleware//middleware/<link>static
+ ;
+explicit middleware-api-dvbv5-process ;
+
+exe middleware-api-ts-file-process : process/src/main.c process/src/demultiplex.c
+ middleware-api-directfb
+ middleware-api-ts-file /middleware//middleware
+ : <include>process/include
+ # <integration-link>shared:<source>/middleware//middleware/<link>shared
+ # <integration-link>static:<source>/middleware//middleware/<link>static
+ ;
+explicit middleware-api-ts-file-process ;
+
+install stage-dvbv5 : middleware-api-dvbv5-process
+ : <install-dependencies>on <install-type>EXE <location>stage
+ <install-type>SHARED_LIB ;
+explicit stage-dvbv5 ;
+
+install stage-ts-file : middleware-api-ts-file-process
+ : <install-dependencies>on <install-type>EXE <location>stage
+ <install-type>SHARED_LIB ;
+explicit stage-ts-file ;
+
+alias stage : stage-ts-file stage-dvbv5 ;
